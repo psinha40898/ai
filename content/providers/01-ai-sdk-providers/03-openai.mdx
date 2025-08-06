@@ -913,17 +913,6 @@ You can also pass a file-id from the OpenAI Files API.
 }
 ```
 
-You can also pass the URL of a pdf.
-
-```ts
-{
-  type: 'file',
-  data: 'https://sample.edu/example.pdf',
-  mediaType: 'application/pdf',
-  filename: 'ai.pdf', // optional
-}
-```
-
 The model will have access to the contents of the PDF file and
 respond to questions about it.
 The PDF file should be passed using the `data` field,

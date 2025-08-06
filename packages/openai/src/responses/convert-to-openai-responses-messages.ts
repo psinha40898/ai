@@ -9,7 +9,6 @@ import {
   OpenAIResponsesPrompt,
   OpenAIResponsesReasoning,
 } from './openai-responses-api-types';
-import { convertToBase64 } from '@ai-sdk/provider-utils';
 
 export async function convertToOpenAIResponsesMessages({
   prompt,
@@ -94,7 +93,7 @@ export async function convertToOpenAIResponsesMessages({
                       ? { file_id: part.data }
                       : {
                           filename: part.filename ?? `part-${index}.pdf`,
-                          file_data: `data:application/pdf;base64,${convertToBase64(part.data)}`,
+                          file_data: `data:application/pdf;base64,${part.data}`,
                         }),
                   };
                 } else {
