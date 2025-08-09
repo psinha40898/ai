@@ -557,9 +557,85 @@ for await (const part of result.textStream) {
 }
 ```
 
+### Image support
+
+Anthropic's Haiku, Sonnet, and Opus models support reading image files.
+You can pass image files as part of the message content using the `image` type:
+
+Option 1: URL-based image file
+
+```ts
+const result = await generateText({
+  model: anthropic('claude-3-5-sonnet-20241022'),
+  messages: [
+    {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: 'Please list all the stamps in this passport.',
+        },
+        {
+          type: 'image',
+          data: new URL(
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/WW2_Spanish_official_passport.jpg/1498px-WW2_Spanish_official_passport.jpg',
+          ),
+        },
+      ],
+    },
+  ],
+});
+```
+
+Option 2: Base64-encoded image document
+
+```ts
+const result = await generateText({
+  model: anthropic('claude-3-5-sonnet-20241022'),
+  messages: [
+    {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: 'Please list all the stamps in this passport.',
+        },
+        {
+          type: 'image',
+          data: fs.readFileSync('./WW2_Spanish_official_passport.jpg'),
+        },
+      ],
+    },
+  ],
+});
+```
+
+Option 3: File ID from Anthropic Files API
+
+```ts
+const result = await generateText({
+  model: anthropic('claude-3-5-sonnet-20241022'),
+  messages: [
+    {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: 'Please list all the stamps in this passport.',
+        },
+        {
+          type: 'image',
+          data: 'file_011CRwjVBceJSitY8xDo7ZBx',
+        },
+      ],
+    },
+  ],
+});
+```
+
 ### PDF support
 
-Anthropic Sonnet `claude-3-5-sonnet-20241022` supports reading PDF files.
+Anthropic's Haiku, Sonnet, and Opus models support reading PDF files.
 You can pass PDF files as part of the message content using the `file` type:
 
 Option 1: URL-based PDF document
@@ -604,6 +680,30 @@ const result = await generateText({
         {
           type: 'file',
           data: fs.readFileSync('./data/ai.pdf'),
+          mediaType: 'application/pdf',
+        },
+      ],
+    },
+  ],
+});
+```
+
+Option 3: File ID from Anthropic Files API
+
+```ts
+const result = await generateText({
+  model: anthropic('claude-3-5-sonnet-20241022'),
+  messages: [
+    {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: 'What is an embedding model according to this document?',
+        },
+        {
+          type: 'file',
+          data: 'file_011CRwikbpECRLKspRWq1QtR',
           mediaType: 'application/pdf',
         },
       ],
