@@ -150,10 +150,13 @@ export async function convertToAnthropicMessagesPrompt({
                               }
                             : typeof part.data === 'string' &&
                                 part.data.startsWith('file_')
-                              ? {
-                                  type: 'file',
-                                  file_id: part.data,
-                                }
+                              ? (() => {
+                                  betas.add('files-api-2025-04-14');
+                                  return {
+                                    type: 'file',
+                                    file_id: part.data,
+                                  };
+                                })()
                               : {
                                   type: 'base64',
                                   media_type:
@@ -185,10 +188,13 @@ export async function convertToAnthropicMessagesPrompt({
                               }
                             : typeof part.data === 'string' &&
                                 part.data.startsWith('file_')
-                              ? {
-                                  type: 'file',
-                                  file_id: part.data,
-                                }
+                              ? (() => {
+                                  betas.add('files-api-2025-04-14');
+                                  return {
+                                    type: 'file',
+                                    file_id: part.data,
+                                  };
+                                })()
                               : {
                                   type: 'base64',
                                   media_type: 'application/pdf',

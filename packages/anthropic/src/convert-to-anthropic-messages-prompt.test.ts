@@ -123,6 +123,46 @@ describe('user messages', () => {
     });
   });
 
+  it('should add image parts for file IDs', async () => {
+    const result = await convertToAnthropicMessagesPrompt({
+      prompt: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'file',
+              data: 'file_image_123',
+              mediaType: 'image/jpeg',
+            },
+          ],
+        },
+      ],
+      sendReasoning: true,
+      warnings: [],
+    });
+
+    expect(result).toEqual({
+      prompt: {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'file',
+                  file_id: 'file_image_123',
+                },
+              },
+            ],
+          },
+        ],
+        system: undefined,
+      },
+      betas: new Set(['files-api-2025-04-14']),
+    });
+  });
+
   it('should add PDF file parts for base64 PDFs', async () => {
     const result = await convertToAnthropicMessagesPrompt({
       prompt: [
@@ -201,6 +241,46 @@ describe('user messages', () => {
         system: undefined,
       },
       betas: new Set(['pdfs-2024-09-25']),
+    });
+  });
+
+  it('should add PDF file parts for file IDs', async () => {
+    const result = await convertToAnthropicMessagesPrompt({
+      prompt: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'file',
+              data: 'file_pdf_123',
+              mediaType: 'application/pdf',
+            },
+          ],
+        },
+      ],
+      sendReasoning: true,
+      warnings: [],
+    });
+
+    expect(result).toEqual({
+      prompt: {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'document',
+                source: {
+                  type: 'file',
+                  file_id: 'file_pdf_123',
+                },
+              },
+            ],
+          },
+        ],
+        system: undefined,
+      },
+      betas: new Set(['pdfs-2024-09-25', 'files-api-2025-04-14']),
     });
   });
 
