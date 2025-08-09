@@ -148,14 +148,20 @@ export async function convertToAnthropicMessagesPrompt({
                                 type: 'url',
                                 url: part.data.toString(),
                               }
-                            : {
-                                type: 'base64',
-                                media_type:
-                                  part.mediaType === 'image/*'
-                                    ? 'image/jpeg'
-                                    : part.mediaType,
-                                data: convertToBase64(part.data),
-                              },
+                            : typeof part.data === 'string' &&
+                                part.data.startsWith('file_')
+                              ? {
+                                  type: 'file',
+                                  file_id: part.data,
+                                }
+                              : {
+                                  type: 'base64',
+                                  media_type:
+                                    part.mediaType === 'image/*'
+                                      ? 'image/jpeg'
+                                      : part.mediaType,
+                                  data: convertToBase64(part.data),
+                                },
                         cache_control: cacheControl,
                       });
                     } else if (part.mediaType === 'application/pdf') {
@@ -177,11 +183,17 @@ export async function convertToAnthropicMessagesPrompt({
                                 type: 'url',
                                 url: part.data.toString(),
                               }
-                            : {
-                                type: 'base64',
-                                media_type: 'application/pdf',
-                                data: convertToBase64(part.data),
-                              },
+                            : typeof part.data === 'string' &&
+                                part.data.startsWith('file_')
+                              ? {
+                                  type: 'file',
+                                  file_id: part.data,
+                                }
+                              : {
+                                  type: 'base64',
+                                  media_type: 'application/pdf',
+                                  data: convertToBase64(part.data),
+                                },
                         title: metadata.title ?? part.filename,
                         ...(metadata.context && { context: metadata.context }),
                         ...(enableCitations && {
