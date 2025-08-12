@@ -79,8 +79,6 @@ export const anthropicTools = {
 
   /**
    * Creates a tool for executing Python code. Must have name "code_execution".
-   *
-   * @param maxUses - The maximum number of times the tool can be used.
    */
   codeExecution_20250522,
 };
