@@ -671,6 +671,7 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV2 {
       | 'redacted_thinking'
       | 'server_tool_use'
       | 'web_search_tool_result'
+      | 'code_execution_tool_result'
       | undefined = undefined;
 
     const generateId = this.generateId;
@@ -737,6 +738,18 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV2 {
                         } satisfies AnthropicReasoningMetadata,
                       },
                     });
+                    return;
+                  }
+
+                  case 'code_execution_tool_result': {
+                    // Handle code execution tool result
+                    contentBlocks[value.index] = {
+                      type: 'tool-call',
+                      toolCallId: `tool-call-${value.index}`,
+                      toolName: 'code_execution',
+                      input: '',
+                      providerExecuted: true,
+                    };
                     return;
                   }
 
