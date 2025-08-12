@@ -757,18 +757,6 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV2 {
                     return;
                   }
 
-                  case 'code_execution_tool_result': {
-                    // Handle code execution tool result
-                    contentBlocks[value.index] = {
-                      type: 'tool-call',
-                      toolCallId: `tool-call-${value.index}`,
-                      toolName: 'code_execution',
-                      input: '',
-                      providerExecuted: true,
-                    };
-                    return;
-                  }
-
                   case 'tool_use': {
                     contentBlocks[value.index] = usesJsonResponseTool
                       ? { type: 'text' }
