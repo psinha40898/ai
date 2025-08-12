@@ -498,7 +498,6 @@ export async function convertToAnthropicMessagesPrompt({
                       stdout: codeExecutionOutput.stdout,
                       stderr: codeExecutionOutput.stderr,
                       return_code: codeExecutionOutput.return_code,
-                      content: codeExecutionOutput.content || [],
                     },
                     cache_control: cacheControl,
                   });

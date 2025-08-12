@@ -583,7 +583,6 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV2 {
                 stdout: part.content.stdout,
                 stderr: part.content.stderr,
                 return_code: part.content.return_code,
-                content: part.content.content || [],
               },
               providerExecuted: true,
             });
@@ -864,7 +863,6 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV2 {
                           stdout: part.content.stdout,
                           stderr: part.content.stderr,
                           return_code: part.content.return_code,
-                          content: part.content.content || [],
                         },
                         providerExecuted: true,
                       });
@@ -1165,7 +1163,6 @@ const anthropicMessagesResponseSchema = z.object({
             stdout: z.string(),
             stderr: z.string(),
             return_code: z.number(),
-            content: z.array(z.unknown()).optional(),
           }),
           // Error case
           z.object({
@@ -1257,7 +1254,6 @@ const anthropicMessagesChunkSchema = z.discriminatedUnion('type', [
             stdout: z.string(),
             stderr: z.string(),
             return_code: z.number(),
-            content: z.array(z.unknown()).optional(),
           }),
           // Error case (from documentation)
           z.object({
