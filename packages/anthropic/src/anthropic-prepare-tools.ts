@@ -131,6 +131,13 @@ export function prepareTools({
             });
             break;
           }
+          case 'anthropic.code_execution_20250522': {
+            anthropicTools.push({
+              type: 'code_execution_20250522',
+              name: 'code_execution',
+            });
+            break;
+          }
           default:
             toolWarnings.push({ type: 'unsupported-tool', tool });
             break;

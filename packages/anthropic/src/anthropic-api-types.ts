@@ -172,6 +172,10 @@ export type AnthropicTool =
         country?: string;
         timezone?: string;
       };
+    }
+  | {
+      type: 'code_execution_20250522';
+      name: string;
     };
 
 export type AnthropicToolChoice =
