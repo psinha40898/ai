@@ -30,6 +30,7 @@ export interface AnthropicAssistantMessage {
     | AnthropicToolCallContent
     | AnthropicServerToolUseContent
     | AnthropicWebSearchToolResultContent
+    | AnthropicCodeExecutionToolResultContent // Add this line
   >;
 }
 
@@ -94,7 +95,7 @@ export interface AnthropicToolCallContent {
 export interface AnthropicServerToolUseContent {
   type: 'server_tool_use';
   id: string;
-  name: 'web_search';
+  name: 'web_search' | 'code_execution'; // Update this line
   input: unknown;
   cache_control: AnthropicCacheControl | undefined;
 }
@@ -117,6 +118,19 @@ export interface AnthropicWebSearchToolResultContent {
     encrypted_content: string;
     type: string;
   }>;
+  cache_control: AnthropicCacheControl | undefined;
+}
+
+export interface AnthropicCodeExecutionToolResultContent {
+  type: 'code_execution_tool_result';
+  tool_use_id: string;
+  content: {
+    type: 'code_execution_result';
+    stdout: string;
+    stderr: string;
+    return_code: number;
+    content: unknown[];
+  };
   cache_control: AnthropicCacheControl | undefined;
 }
 

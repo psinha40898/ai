@@ -514,7 +514,7 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV2 {
           break;
         }
         case 'server_tool_use': {
-          if (part.name === 'web_search') {
+          if (part.name === 'web_search' || part.name === 'code_execution') {
             content.push({
               type: 'tool-call',
               toolCallId: part.id,
@@ -523,7 +523,6 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV2 {
               providerExecuted: true,
             });
           }
-
           break;
         }
         case 'web_search_tool_result': {
@@ -569,6 +568,23 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV2 {
               providerExecuted: true,
             });
           }
+          break;
+        }
+
+        case 'code_execution_tool_result': {
+          content.push({
+            type: 'tool-result',
+            toolCallId: part.tool_use_id,
+            toolName: 'code_execution',
+            result: {
+              type: part.content.type,
+              stdout: part.content.stdout,
+              stderr: part.content.stderr,
+              return_code: part.content.return_code,
+              content: part.content.content || [],
+            },
+            providerExecuted: true,
+          });
           break;
         }
       }
@@ -747,7 +763,10 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV2 {
                   }
 
                   case 'server_tool_use': {
-                    if (value.content_block.name === 'web_search') {
+                    if (
+                      value.content_block.name === 'web_search' ||
+                      value.content_block.name === 'code_execution'
+                    ) {
                       contentBlocks[value.index] = {
                         type: 'tool-call',
                         toolCallId: value.content_block.id,
@@ -814,6 +833,25 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV2 {
                     return;
                   }
 
+                  case 'code_execution_tool_result': {
+                    const part = value.content_block;
+
+                    controller.enqueue({
+                      type: 'tool-result',
+                      toolCallId: part.tool_use_id,
+                      toolName: 'code_execution',
+                      result: {
+                        type: part.content.type,
+                        stdout: part.content.stdout,
+                        stderr: part.content.stderr,
+                        return_code: part.content.return_code,
+                        content: part.content.content || [],
+                      },
+                      providerExecuted: true,
+                    });
+
+                    return;
+                  }
                   default: {
                     const _exhaustiveCheck: never = contentBlockType;
                     throw new Error(
@@ -1082,6 +1120,17 @@ const anthropicMessagesResponseSchema = z.object({
           }),
         ]),
       }),
+      z.object({
+        type: z.literal('code_execution_tool_result'),
+        tool_use_id: z.string(),
+        content: z.object({
+          type: z.literal('code_execution_result'),
+          stdout: z.string(),
+          stderr: z.string(),
+          return_code: z.number(),
+          content: z.array(z.unknown()).optional(),
+        }),
+      }),
     ]),
   ),
   stop_reason: z.string().nullish(),
@@ -1154,6 +1203,17 @@ const anthropicMessagesChunkSchema = z.discriminatedUnion('type', [
             error_code: z.string(),
           }),
         ]),
+      }),
+      z.object({
+        type: z.literal('code_execution_tool_result'),
+        tool_use_id: z.string(),
+        content: z.object({
+          type: z.literal('code_execution_result'),
+          stdout: z.string(),
+          stderr: z.string(),
+          return_code: z.number(),
+          content: z.array(z.unknown()).optional(),
+        }),
       }),
     ]),
   }),
