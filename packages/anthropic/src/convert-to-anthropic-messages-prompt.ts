@@ -412,6 +412,18 @@ export async function convertToAnthropicMessagesPrompt({
                     break;
                   }
 
+                  if (part.toolName === 'code_execution') {
+                    anthropicContent.push({
+                      type: 'server_tool_use',
+                      id: part.toolCallId,
+                      name: 'code_execution',
+                      input: part.input,
+                      cache_control: cacheControl,
+                    });
+
+                    break;
+                  }
+
                   warnings.push({
                     type: 'other',
                     message: `provider executed tool call for tool ${part.toolName} is not supported`,
