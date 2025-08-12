@@ -6,7 +6,6 @@ export const codeExecution_20250522OutputSchema = z.object({
   stdout: z.string(),
   stderr: z.string(),
   return_code: z.number(),
-  content: z.array(z.unknown()).optional(), // Based on your test showing empty array
 });
 
 const factory = createProviderDefinedToolFactoryWithOutputSchema<
@@ -21,7 +20,6 @@ const factory = createProviderDefinedToolFactoryWithOutputSchema<
     stdout: string;
     stderr: string;
     return_code: number;
-    content?: unknown[];
   },
   {} // No configuration arguments needed
 >({
