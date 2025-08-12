@@ -572,19 +572,35 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV2 {
         }
 
         case 'code_execution_tool_result': {
-          content.push({
-            type: 'tool-result',
-            toolCallId: part.tool_use_id,
-            toolName: 'code_execution',
-            result: {
-              type: part.content.type,
-              stdout: part.content.stdout,
-              stderr: part.content.stderr,
-              return_code: part.content.return_code,
-              content: part.content.content || [],
-            },
-            providerExecuted: true,
-          });
+          if (part.content.type === 'code_execution_result') {
+            // Success case
+            content.push({
+              type: 'tool-result',
+              toolCallId: part.tool_use_id,
+              toolName: 'code_execution',
+              result: {
+                type: part.content.type,
+                stdout: part.content.stdout,
+                stderr: part.content.stderr,
+                return_code: part.content.return_code,
+                content: part.content.content || [],
+              },
+              providerExecuted: true,
+            });
+          } else if (part.content.type === 'code_execution_tool_result_error') {
+            // Error case
+            content.push({
+              type: 'tool-result',
+              toolCallId: part.tool_use_id,
+              toolName: 'code_execution',
+              isError: true,
+              result: {
+                type: 'code_execution_tool_result_error',
+                errorCode: part.content.error_code,
+              },
+              providerExecuted: true,
+            });
+          }
           break;
         }
       }
@@ -849,19 +865,37 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV2 {
                   case 'code_execution_tool_result': {
                     const part = value.content_block;
 
-                    controller.enqueue({
-                      type: 'tool-result',
-                      toolCallId: part.tool_use_id,
-                      toolName: 'code_execution',
-                      result: {
-                        type: part.content.type,
-                        stdout: part.content.stdout,
-                        stderr: part.content.stderr,
-                        return_code: part.content.return_code,
-                        content: part.content.content || [],
-                      },
-                      providerExecuted: true,
-                    });
+                    if (part.content.type === 'code_execution_result') {
+                      // Success case
+                      controller.enqueue({
+                        type: 'tool-result',
+                        toolCallId: part.tool_use_id,
+                        toolName: 'code_execution',
+                        result: {
+                          type: part.content.type,
+                          stdout: part.content.stdout,
+                          stderr: part.content.stderr,
+                          return_code: part.content.return_code,
+                          content: part.content.content || [],
+                        },
+                        providerExecuted: true,
+                      });
+                    } else if (
+                      part.content.type === 'code_execution_tool_result_error'
+                    ) {
+                      // Error case
+                      controller.enqueue({
+                        type: 'tool-result',
+                        toolCallId: part.tool_use_id,
+                        toolName: 'code_execution',
+                        isError: true,
+                        result: {
+                          type: 'code_execution_tool_result_error',
+                          errorCode: part.content.error_code,
+                        },
+                        providerExecuted: true,
+                      });
+                    }
 
                     return;
                   }
@@ -1136,13 +1170,21 @@ const anthropicMessagesResponseSchema = z.object({
       z.object({
         type: z.literal('code_execution_tool_result'),
         tool_use_id: z.string(),
-        content: z.object({
-          type: z.literal('code_execution_result'),
-          stdout: z.string(),
-          stderr: z.string(),
-          return_code: z.number(),
-          content: z.array(z.unknown()).optional(),
-        }),
+        content: z.union([
+          // Success case
+          z.object({
+            type: z.literal('code_execution_result'),
+            stdout: z.string(),
+            stderr: z.string(),
+            return_code: z.number(),
+            content: z.array(z.unknown()).optional(),
+          }),
+          // Error case
+          z.object({
+            type: z.literal('code_execution_tool_result_error'),
+            error_code: z.string(),
+          }),
+        ]),
       }),
     ]),
   ),
@@ -1220,13 +1262,21 @@ const anthropicMessagesChunkSchema = z.discriminatedUnion('type', [
       z.object({
         type: z.literal('code_execution_tool_result'),
         tool_use_id: z.string(),
-        content: z.object({
-          type: z.literal('code_execution_result'),
-          stdout: z.string(),
-          stderr: z.string(),
-          return_code: z.number(),
-          content: z.array(z.unknown()).optional(),
-        }),
+        content: z.union([
+          // Success case
+          z.object({
+            type: z.literal('code_execution_result'),
+            stdout: z.string(),
+            stderr: z.string(),
+            return_code: z.number(),
+            content: z.array(z.unknown()).optional(),
+          }),
+          // Error case (from documentation)
+          z.object({
+            type: z.literal('code_execution_tool_result_error'),
+            error_code: z.string(),
+          }),
+        ]),
       }),
     ]),
   }),
