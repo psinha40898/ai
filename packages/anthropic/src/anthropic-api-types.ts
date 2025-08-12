@@ -129,7 +129,6 @@ export interface AnthropicCodeExecutionToolResultContent {
     stdout: string;
     stderr: string;
     return_code: number;
-    content: unknown[];
   };
   cache_control: AnthropicCacheControl | undefined;
 }
