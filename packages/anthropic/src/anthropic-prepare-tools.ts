@@ -132,6 +132,7 @@ export function prepareTools({
             break;
           }
           case 'anthropic.code_execution_20250522': {
+            betas.add('code-execution-2025-05-22');
             anthropicTools.push({
               type: 'code_execution_20250522',
               name: 'code_execution',
