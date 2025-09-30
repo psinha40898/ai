@@ -26,6 +26,7 @@ const TEST_PROMPT: LanguageModelV3Prompt = [
 const provider = createAnthropic({
   apiKey: 'test-api-key',
   generateId: mockId({ prefix: 'id' }),
+  fileIdPrefixes: [],
 });
 const model = provider('claude-3-haiku-20240307');
 

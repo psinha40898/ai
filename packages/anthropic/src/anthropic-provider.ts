@@ -61,6 +61,15 @@ or to provide a custom fetch implementation for e.g. testing.
   fetch?: FetchFunction;
 
   generateId?: () => string;
+
+  /**
+   * File ID prefixes used to identify file IDs in Anthropic Messages API.
+   * When undefined, all file data is treated as base64 content.
+   *
+   * Examples:
+   * - Anthropic: ['file_'] for IDs like 'file_abc123'
+   */
+  fileIdPrefixes?: readonly string[];
 }
 
 /**
@@ -96,6 +105,7 @@ export function createAnthropic(
       supportedUrls: () => ({
         'image/*': [/^https?:\/\/.*$/],
       }),
+      fileIdPrefixes: ['file-'],
     });
 
   const provider = function (modelId: AnthropicMessagesModelId) {

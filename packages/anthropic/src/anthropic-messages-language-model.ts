@@ -144,6 +144,8 @@ type AnthropicMessagesConfig = {
   transformRequestBody?: (args: Record<string, any>) => Record<string, any>;
   supportedUrls?: () => LanguageModelV3['supportedUrls'];
   generateId?: () => string;
+  // Files API Prefixes may vary by provider
+  fileIdPrefixes?: readonly string[];
 };
 
 export class AnthropicMessagesLanguageModel implements LanguageModelV3 {
@@ -254,6 +256,7 @@ export class AnthropicMessagesLanguageModel implements LanguageModelV3 {
         prompt,
         sendReasoning: anthropicOptions?.sendReasoning ?? true,
         warnings,
+        fileIdPrefixes: this.config.fileIdPrefixes,
       });
 
     const isThinking = anthropicOptions?.thinking?.type === 'enabled';

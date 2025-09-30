@@ -41,14 +41,25 @@ function convertToString(data: LanguageModelV3DataContent): string {
   });
 }
 
+/**
+ * Check if a string is a file ID based on the given prefixes
+ * Returns false if prefixes is undefined (disables file ID detection)
+ */
+function isFileId(data: string, prefixes?: readonly string[]): boolean {
+  if (!prefixes) return false;
+  return prefixes.some(prefix => data.startsWith(prefix));
+}
+
 export async function convertToAnthropicMessagesPrompt({
   prompt,
   sendReasoning,
   warnings,
+  fileIdPrefixes,
 }: {
   prompt: LanguageModelV3Prompt;
   sendReasoning: boolean;
   warnings: LanguageModelV3CallWarning[];
+  fileIdPrefixes?: readonly string[];
 }): Promise<{
   prompt: AnthropicMessagesPrompt;
   betas: Set<string>;
@@ -151,14 +162,23 @@ export async function convertToAnthropicMessagesPrompt({
                                 type: 'url',
                                 url: part.data.toString(),
                               }
-                            : {
-                                type: 'base64',
-                                media_type:
-                                  part.mediaType === 'image/*'
-                                    ? 'image/jpeg'
-                                    : part.mediaType,
-                                data: convertToBase64(part.data),
-                              },
+                            : typeof part.data === 'string' &&
+                                isFileId(part.data, fileIdPrefixes)
+                              ? (() => {
+                                  betas.add('files-api-2025-04-14');
+                                  return {
+                                    type: 'file',
+                                    file_id: part.data,
+                                  };
+                                })()
+                              : {
+                                  type: 'base64',
+                                  media_type:
+                                    part.mediaType === 'image/*'
+                                      ? 'image/jpeg'
+                                      : part.mediaType,
+                                  data: convertToBase64(part.data),
+                                },
                         cache_control: cacheControl,
                       });
                     } else if (part.mediaType === 'application/pdf') {
@@ -180,11 +200,20 @@ export async function convertToAnthropicMessagesPrompt({
                                 type: 'url',
                                 url: part.data.toString(),
                               }
-                            : {
-                                type: 'base64',
-                                media_type: 'application/pdf',
-                                data: convertToBase64(part.data),
-                              },
+                            : typeof part.data === 'string' &&
+                                isFileId(part.data, fileIdPrefixes)
+                              ? (() => {
+                                  betas.add('files-api-2025-04-14');
+                                  return {
+                                    type: 'file',
+                                    file_id: part.data,
+                                  };
+                                })()
+                              : {
+                                  type: 'base64',
+                                  media_type: 'application/pdf',
+                                  data: convertToBase64(part.data),
+                                },
                         title: metadata.title ?? part.filename,
                         ...(metadata.context && { context: metadata.context }),
                         ...(enableCitations && {
