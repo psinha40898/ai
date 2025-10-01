@@ -105,7 +105,7 @@ export function createAnthropic(
       supportedUrls: () => ({
         'image/*': [/^https?:\/\/.*$/],
       }),
-      fileIdPrefixes: ['file-'],
+      fileIdPrefixes: ['file_'],
     });
 
   const provider = function (modelId: AnthropicMessagesModelId) {
