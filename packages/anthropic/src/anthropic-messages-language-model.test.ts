@@ -12,12 +12,26 @@ import { createTestServer } from '@ai-sdk/test-server/with-vitest';
 import fs from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type DocumentCitation } from './anthropic-messages-language-model';
+import { AnthropicMessagesLanguageModel } from './anthropic-messages-language-model';
 import { AnthropicProviderOptions } from './anthropic-messages-options';
 import { createAnthropic } from './anthropic-provider';
 
 vi.mock('./version', () => ({
   VERSION: '0.0.0-test',
 }));
+
+function createModel(modelId: string, fileIdPrefixes?: readonly string[]) {
+  return new AnthropicMessagesLanguageModel(modelId, {
+    provider: 'anthropic',
+    baseURL: 'https://api.anthropic.com',
+    headers: () => ({ 'x-api-key': 'test-api-key', 'anthropic-version': '2023-06-01' }),
+    generateId: mockId({ prefix: 'id' }),
+    fileIdPrefixes: fileIdPrefixes ?? ['file_'],
+    buildRequestUrl: (baseURL: string, isStreaming: boolean) => {
+      return `${baseURL}/v1/messages`;
+    },
+  });
+}
 
 const TEST_PROMPT: LanguageModelV3Prompt = [
   { role: 'user', content: [{ type: 'text', text: 'Hello' }] },
@@ -1863,6 +1877,209 @@ describe('AnthropicMessagesLanguageModel', () => {
         }),
       ).rejects.toThrow('Overloaded');
     });
+
+  describe('fileIdPrefixes configuration', () => {
+    const TEST_PROMPT_WITH_FILE: LanguageModelV3Prompt = [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Analyze this image' },
+          {
+            type: 'file',
+            mediaType: 'image/jpeg',
+            data: 'file_abc123',
+          },
+        ],
+      },
+    ];
+
+    beforeEach(() => {
+      prepareJsonResponse({
+        content: [{ type: 'text', text: 'I can see the image.' }],
+      });
+    });
+
+    it('should pass fileIdPrefixes to convertToAnthropicMessagesPrompt', async () => {
+      const providerWithPrefixes = createAnthropic({
+        apiKey: 'test-api-key',
+        generateId: mockId({ prefix: 'id' }),
+        fileIdPrefixes: ['file_'],
+      });
+      const model = providerWithPrefixes('claude-3-haiku-20240307');
+
+      await model.doGenerate({
+        prompt: TEST_PROMPT_WITH_FILE,
+      });
+
+      const requestBody = await server.calls[0].requestBodyJson;
+      const requestHeaders = server.calls[0].requestHeaders ?? {};
+      expect(requestBody.messages[0].content).toEqual([
+        { type: 'text', text: 'Analyze this image' },
+        {
+          type: 'image',
+          source: {
+            type: 'file',
+            file_id: 'file_abc123',
+          },
+        },
+      ]);
+      expect(requestHeaders['anthropic-beta']).toContain('files-api-2025-04-14');
+    });
+
+    it('should handle multiple file ID prefixes', async () => {
+      const model = createModel('claude-3-haiku-20240307', ['file_', 'custom_']);
+
+      await model.doGenerate({
+        prompt: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Compare these images' },
+              {
+                type: 'file',
+                mediaType: 'image/jpeg',
+                data: 'file_abc123',
+              },
+              {
+                type: 'file',
+                mediaType: 'image/jpeg',
+                data: 'custom_xyz789',
+              },
+            ],
+          },
+        ],
+      });
+
+      const requestBody = await server.calls[0].requestBodyJson;
+      const requestHeaders = server.calls[0].requestHeaders ?? {};
+      expect(requestBody.messages[0].content).toEqual([
+        { type: 'text', text: 'Compare these images' },
+        {
+          type: 'image',
+          source: {
+            type: 'file',
+            file_id: 'file_abc123',
+          },
+        },
+        {
+          type: 'image',
+          source: {
+            type: 'file',
+            file_id: 'custom_xyz789',
+          },
+        },
+      ]);
+      expect(requestHeaders['anthropic-beta']).toContain('files-api-2025-04-14');
+    });
+
+    it('should handle PDF files with file ID prefixes', async () => {
+      const model = createModel('claude-3-haiku-20240307', ['file_']);
+
+      await model.doGenerate({
+        prompt: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Analyze this PDF' },
+              {
+                type: 'file',
+                mediaType: 'application/pdf',
+                data: 'file_pdf_123',
+              },
+            ],
+          },
+        ],
+      });
+
+      const requestBody = await server.calls[0].requestBodyJson;
+      const requestHeaders = server.calls[0].requestHeaders ?? {};
+      expect(requestBody.messages[0].content).toEqual([
+        { type: 'text', text: 'Analyze this PDF' },
+        {
+          type: 'document',
+          source: {
+            type: 'file',
+            file_id: 'file_pdf_123',
+          },
+        },
+      ]);
+      const betaHeader = requestHeaders['anthropic-beta'] ?? '';
+      expect(betaHeader).toContain('files-api-2025-04-14');
+      expect(betaHeader).toContain('pdfs-2024-09-25');
+    });
+
+    it('should default to file ID handling when fileIdPrefixes is undefined', async () => {
+      const model = createModel('claude-3-haiku-20240307', undefined);
+
+      await model.doGenerate({
+        prompt: TEST_PROMPT_WITH_FILE,
+      });
+
+      const requestBody = await server.calls[0].requestBodyJson;
+      const requestHeaders = server.calls[0].requestHeaders ?? {};
+      expect(requestBody.messages[0].content).toEqual([
+        { type: 'text', text: 'Analyze this image' },
+        {
+          type: 'image',
+          source: {
+            type: 'file',
+            file_id: 'file_abc123',
+          },
+        },
+      ]);
+      expect(requestHeaders['anthropic-beta']).toContain('files-api-2025-04-14');
+    });
+
+    it('should fall back to base64 when prefix does not match', async () => {
+      const model = createModel('claude-3-haiku-20240307', ['other_']);
+
+      await model.doGenerate({
+        prompt: TEST_PROMPT_WITH_FILE,
+      });
+
+      const requestBody = await server.calls[0].requestBodyJson;
+      const requestHeaders = server.calls[0].requestHeaders ?? {};
+      expect(requestBody.messages[0].content).toEqual([
+        { type: 'text', text: 'Analyze this image' },
+        {
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: 'image/jpeg',
+            data: 'file_abc123',
+          },
+        },
+      ]);
+      expect((requestHeaders['anthropic-beta'] ?? '')).not.toContain(
+        'files-api-2025-04-14',
+      );
+    });
+
+    it('should handle empty fileIdPrefixes array', async () => {
+      const model = createModel('claude-3-haiku-20240307', []);
+
+      await model.doGenerate({
+        prompt: TEST_PROMPT_WITH_FILE,
+      });
+
+      const requestBody = await server.calls[0].requestBodyJson;
+      const requestHeaders = server.calls[0].requestHeaders ?? {};
+      expect(requestBody.messages[0].content).toEqual([
+        { type: 'text', text: 'Analyze this image' },
+        {
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: 'image/jpeg',
+            data: 'file_abc123',
+          },
+        },
+      ]);
+      expect((requestHeaders['anthropic-beta'] ?? '')).not.toContain(
+        'files-api-2025-04-14',
+      );
+    });
+  });
   });
 
   describe('doStream', () => {

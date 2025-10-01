@@ -271,6 +271,231 @@ describe('user messages', () => {
       }),
     ).rejects.toThrow('media type: video/mp4');
   });
+
+  it('should add image parts using file_id with file_ prefix', async () => {
+    const result = await convertToAnthropicMessagesPrompt({
+      prompt: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'file',
+              mediaType: 'image/png',
+              data: 'file_12345',
+            },
+          ],
+        },
+      ],
+      sendReasoning: true,
+      fileIdPrefixes: ['file_'],
+      warnings: [],
+    });
+
+    expect(result.prompt.messages).toEqual([
+      expect.objectContaining({
+        role: 'user',
+        content: [
+          expect.objectContaining({
+            type: 'image',
+            source: expect.objectContaining({
+              type: 'file',
+              file_id: 'file_12345',
+            }),
+          }),
+        ],
+      }),
+    ]);
+    expect(result.betas).toEqual(new Set(['files-api-2025-04-14']));
+  });
+
+  it('should add PDF file parts using file_id with file_ prefix', async () => {
+    const result = await convertToAnthropicMessagesPrompt({
+      prompt: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'file',
+              mediaType: 'application/pdf',
+              data: 'file_pdf_12345',
+            },
+          ],
+        },
+      ],
+      sendReasoning: true,
+      fileIdPrefixes: ['file_'],
+      warnings: [],
+    });
+
+    expect(result.prompt.messages).toEqual([
+      expect.objectContaining({
+        role: 'user',
+        content: [
+          expect.objectContaining({
+            type: 'document',
+            source: expect.objectContaining({
+              type: 'file',
+              file_id: 'file_pdf_12345',
+            }),
+          }),
+        ],
+      }),
+    ]);
+    expect(result.betas).toEqual(
+      new Set(['pdfs-2024-09-25', 'files-api-2025-04-14']),
+    );
+  });
+
+  describe('multiple file ID prefixes', () => {
+    it('should support multiple file ID prefixes', async () => {
+      const result = await convertToAnthropicMessagesPrompt({
+        prompt: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'file',
+                mediaType: 'image/png',
+                data: 'custom_img_abc123',
+              },
+              {
+                type: 'file',
+                mediaType: 'application/pdf',
+                data: 'file_pdf_xyz789',
+              },
+            ],
+          },
+        ],
+        sendReasoning: true,
+        fileIdPrefixes: ['custom_', 'file_'],
+        warnings: [],
+      });
+
+      expect(result.prompt.messages).toEqual([
+        expect.objectContaining({
+          role: 'user',
+          content: [
+            expect.objectContaining({
+              type: 'image',
+              source: expect.objectContaining({
+                type: 'file',
+                file_id: 'custom_img_abc123',
+              }),
+            }),
+            expect.objectContaining({
+              type: 'document',
+              source: expect.objectContaining({
+                type: 'file',
+                file_id: 'file_pdf_xyz789',
+              }),
+            }),
+          ],
+        }),
+      ]);
+      expect(result.betas).toEqual(
+        new Set(['pdfs-2024-09-25', 'files-api-2025-04-14']),
+      );
+    });
+  });
+
+  describe('fileIdPrefixes undefined behavior', () => {
+    it('should treat all file data as base64 when fileIdPrefixes is undefined', async () => {
+      const result = await convertToAnthropicMessagesPrompt({
+        prompt: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'file',
+                mediaType: 'image/png',
+                data: 'file_12345', // Looks like file ID but should be treated as base64
+              },
+              {
+                type: 'file',
+                mediaType: 'application/pdf',
+                data: 'custom_abc123', // Looks like file ID but should be treated as base64
+              },
+            ],
+          },
+        ],
+        sendReasoning: true,
+        // fileIdPrefixes intentionally omitted
+        warnings: [],
+      });
+
+      expect(result).toEqual({
+        prompt: {
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'image',
+                  source: {
+                    data: 'file_12345',
+                    media_type: 'image/png',
+                    type: 'base64',
+                  },
+                },
+                {
+                  type: 'document',
+                  source: {
+                    type: 'base64',
+                    media_type: 'application/pdf',
+                    data: 'custom_abc123',
+                  },
+                },
+              ],
+            },
+          ],
+          system: undefined,
+        },
+        betas: new Set(['pdfs-2024-09-25']),
+      });
+    });
+
+    it('should handle empty fileIdPrefixes array', async () => {
+      const result = await convertToAnthropicMessagesPrompt({
+        prompt: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'file',
+                mediaType: 'image/png',
+                data: 'file_12345',
+              },
+            ],
+          },
+        ],
+        sendReasoning: true,
+        fileIdPrefixes: [], // Empty array should disable file ID detection
+        warnings: [],
+      });
+
+      expect(result).toEqual({
+        prompt: {
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'image',
+                  source: {
+                    data: 'file_12345',
+                    media_type: 'image/png',
+                    type: 'base64',
+                  },
+                },
+              ],
+            },
+          ],
+          system: undefined,
+        },
+        betas: new Set(),
+      });
+    });
+  });
 });
 
 describe('tool messages', () => {
@@ -1071,7 +1296,7 @@ describe('assistant messages', () => {
                   "content": {
                     "return_code": 0,
                     "stderr": "",
-                    "stdout": "Hello, world!\",
+                    "stdout": "Hello, world!",
                     "type": "code_execution_result",
                   },
                   "tool_use_id": "srvtoolu_01XyZ1234567890",
